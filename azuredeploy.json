@@ -1,0 +1,167 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "accountName": {
+      "defaultValue": "formrecognizerapi",
+      "metadata": {
+        "description": "Display name of Form Recognizer API account"
+      },
+      "type": "string"
+    },
+    "SKU": {
+      "type": "string",
+      "metadata": {
+        "description": "SKU for Form Recognizer API"
+      },
+      "defaultValue": "F0",
+      "allowedValues": [
+        "F0"
+      ]
+    },
+    "cognitiveServicesLocation": {
+      "metadata": {
+        "description": "The location for the Form Recognizer API"
+      },
+      "type": "string",
+      "minLength": 1,
+      "allowedValues": [
+        "southcentralus"
+      ],
+      "defaultValue": "southcentralus"
+    },
+	  "storageAccount_name": {
+            "defaultValue": "sc1thornstg",
+            "type": "String"
+        }
+  },
+  "variables": {
+    "cognitiveservicesid": "[concat(resourceGroup().id,'/providers/','Microsoft.CognitiveServices/accounts/', parameters('accountName'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "sku": {
+        "name": "[parameters('SKU')]"
+      },
+      "kind": "FormRecognizer",
+      "name": "[parameters('accountName')]",
+      "apiVersion": "2017-04-18",
+      "location": "[parameters('cognitiveServicesLocation')]",
+      "properties": {
+		"customSubDomainName": "[parameters('accountName')]"
+	  },
+      "dependsOn": []
+    }
+	, {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2019-06-01",
+            "name": "[parameters('storageAccount_name')]",
+            "location": "southcentralus",
+            "sku": {
+                "name": "Standard_RAGRS",
+                "tier": "Standard"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "azureFilesIdentityBasedAuthentication": {
+                    "directoryServiceOptions": "None"
+                },
+                "networkAcls": {
+                    "bypass": "AzureServices",
+                    "virtualNetworkRules": [],
+                    "ipRules": [],
+                    "defaultAction": "Allow"
+                },
+                "supportsHttpsTrafficOnly": false,
+                "encryption": {
+                    "services": {
+                        "file": {
+                            "keyType": "Account",
+                            "enabled": true
+                        },
+                        "blob": {
+                            "keyType": "Account",
+                            "enabled": true
+                        }
+                    },
+                    "keySource": "Microsoft.Storage"
+                },
+                "accessTier": "Hot"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices",
+            "apiVersion": "2019-06-01",
+            "name": "[concat(parameters('storageAccount_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccount_name'))]"
+            ],
+            "sku": {
+                "name": "Standard_RAGRS"
+            },
+            "properties": {
+                "cors": {
+                    "corsRules": [
+                        {
+                            "allowedOrigins": [
+                                "*"
+                            ],
+                            "allowedMethods": [
+                                "DELETE",
+                                "GET",
+                                "HEAD",
+                                "MERGE",
+                                "POST",
+                                "OPTIONS",
+                                "PUT",
+                                "PATCH"
+                            ],
+                            "maxAgeInSeconds": 200,
+                            "exposedHeaders": [
+                                "*"
+                            ],
+                            "allowedHeaders": [
+                                "*"
+                            ]
+                        }
+                    ]
+                },
+                "deleteRetentionPolicy": {
+                    "enabled": false
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2019-06-01",
+            "name": "[concat(parameters('storageAccount_name'), '/default/formrecognizer')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccount_name'), 'default')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccount_name'))]"
+            ],
+            "properties": {
+                "publicAccess": "Container"
+            }
+        }
+   
+  ],
+  "outputs": {
+    "cognitivekeys": {
+      "type": "object",
+      "value": "[listKeys(variables('cognitiveservicesid'),'2016-02-01-preview')]"
+    },
+    "cognitivekey1": {
+      "type": "string",
+      "value": "[listKeys(variables('cognitiveservicesid'),'2016-02-01-preview').key1]"
+    },
+    "cognitivekey2": {
+      "type": "string",
+      "value": "[listKeys(variables('cognitiveservicesid'),'2016-02-01-preview').key2]"
+    },
+    "endpoint": {
+      "type": "string",
+      "value": "[reference(variables('cognitiveservicesid'),'2016-02-01-preview').endpoint]"
+    }
+  }
+}
