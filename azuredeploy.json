@@ -16,7 +16,8 @@
       },
       "defaultValue": "F0",
       "allowedValues": [
-        "F0"
+        "F0",
+		"S0"
       ]
     },
     "cognitiveServicesLocation": {
@@ -31,7 +32,7 @@
       "defaultValue": "southcentralus"
     },
 	  "storageAccount_name": {
-            "defaultValue": "sc1thornstg",
+            "defaultValue": "formrecognizerstg",
             "type": "String"
         }
   },
